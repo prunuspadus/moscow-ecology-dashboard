@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Data (кроме структуры)
+data/raw/avito_json/*.json
+data/raw/eco_data/*.csv
+data/processed/*.csv
+
+# Output
+output/
+*.html
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db

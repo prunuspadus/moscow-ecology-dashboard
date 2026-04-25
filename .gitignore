@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+.env
+
+# Conda
+.conda/
+
+# Data (не загружаем сырые данные в репозиторий)
+data/raw/
+data/processed/
+*.csv
+*.json
+!requirements.txt
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+!notebooks/*.ipynb
+
+# Output
+output/
+*.html
+*.png
+*.jpg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
