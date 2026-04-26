@@ -6,11 +6,11 @@ import plotly.graph_objects as go
 import numpy as np
 from scipy import stats
 
-def calculate_correlation_stats(df: pd.DataFrame, x_col: str, y_col: str):
-    """Рассчитывает статистические метрики корреляции"""
-    data = df[[x_col, y_col]].dropna()
-    x = data[x_col]
-    y = data[y_col]
+def calculate_correlation_stats(df: pd.DataFrame):
+    """Рассчитывает статистические метрики корреляции для средней цены"""
+    data = df[['price_per_sqm_mean', 'eco_index']].dropna()
+    x = data['eco_index']
+    y = data['price_per_sqm_mean']
     
     r, p_value = stats.pearsonr(x, y)
     r_squared = r ** 2
@@ -48,51 +48,43 @@ def calculate_correlation_stats(df: pd.DataFrame, x_col: str, y_col: str):
 def render_analytics_tab(df: pd.DataFrame):
     """Отображает вкладку с графиками аналитики"""
     
-    st.subheader("Взаимосвязь цены и экологии")
+    st.subheader("📈 Взаимосвязь цены и экологии")
     
     # Статистическая карточка
-    with st.expander("Статистический анализ корреляции", expanded=True):
-        stats_mean = calculate_correlation_stats(df, 'eco_index', 'price_per_sqm_mean')
-        stats_median = calculate_correlation_stats(df, 'eco_index', 'price_per_sqm_median')
+    with st.expander("📊 Статистический анализ корреляции", expanded=True):
+        stats = calculate_correlation_stats(df)
         
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown("**Средняя цена**")
-            _render_stats_card(stats_mean)
+            st.metric("Коэффициент корреляции (r)", f"{stats['r']:.3f}")
+            st.caption(f"p-value: {stats['p_value']:.4f}")
         with col2:
-            st.markdown("**Медианная цена**")
-            _render_stats_card(stats_median)
+            st.metric("Коэффициент детерминации (R²)", f"{stats['r_squared']:.3f}")
+            st.caption(f"n = {stats['n_samples']} районов")
+        with col3:
+            st.metric("Интерпретация", stats['interpretation'])
+            status = "✅ значимо" if stats['is_significant'] else "⚠️ не значимо"
+            st.caption(f"Статистическая значимость: {status}")
     
     # Scatter plot с линией тренда
-    st.subheader("Диаграмма рассеяния")
-    _render_scatter_plot_with_trend(df, stats_mean)
+    st.subheader("📉 Диаграмма рассеяния")
+    _render_scatter_plot_with_trend(df, stats)
     
     # Box plot
-    st.subheader("Распределение цен по категориям экологии")
+    st.subheader("📦 Распределение цен по категориям экологии")
     _render_box_plot(df)
     
     # Тепловая карта
-    st.subheader("Матрица корреляций")
+    st.subheader("🔥 Матрица корреляции показателей")
     _render_correlation_matrix(df)
     
     # Рейтинги
-    st.subheader("Рейтинги районов")
+    st.subheader("🏆 Рейтинги районов")
     col1, col2 = st.columns(2)
     with col1:
         _render_top_eco_districts(df)
     with col2:
         _render_top_price_districts(df)
-
-
-def _render_stats_card(stats: dict):
-    """Отображает карточку со статистикой"""
-    st.metric("Коэффициент корреляции (r)", f"{stats['r']:.3f}")
-    st.caption(f"p-value: {stats['p_value']:.4f}")
-    st.metric("Коэффициент детерминации (R²)", f"{stats['r_squared']:.3f}")
-    st.caption(f"Интерпретация: {stats['interpretation']}")
-    status = "значимо" if stats['is_significant'] else "не значимо"
-    st.caption(f"Статистическая значимость: {status}")
-    st.caption(f"Количество районов: {stats['n_samples']}")
 
 
 def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
@@ -117,7 +109,7 @@ def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
             opacity=0.7
         ),
         text=plot_df['District'],
-        hovertemplate='<b>%{text}</b><br>Эко-индекс: %{x:.1f}<br>Цена: %{y:,.0f} ₽<extra></extra>',
+        hovertemplate='<b>%{text}</b><br>🌿 Эко-индекс: %{x:.1f}<br>💰 Цена: %{y:,.0f} ₽<extra></extra>',
         name='Районы'
     ))
     
@@ -132,7 +124,7 @@ def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
         y=y_trend,
         mode='lines',
         line=dict(color='red', width=2, dash='dash'),
-        name=f'Тренд: y = {z[0]:.0f}x + {z[1]:.0f}<br>r = {stats["r"]:.3f}'
+        name=f'📈 Тренд: y = {z[0]:.0f}x + {z[1]:.0f}<br>r = {stats["r"]:.3f}'
     ))
     
     fig.update_layout(
@@ -184,12 +176,12 @@ def _render_correlation_matrix(df: pd.DataFrame):
     corr_matrix = df[available_cols].corr()
     
     rename_map = {
-        'price_per_sqm_mean': 'Цена за м²',
-        'eco_index': 'Эко-индекс',
-        'area_mean': 'Площадь',
-        'air_quality_score': 'Качество воздуха',
-        'noise_quality': 'Качество шума',
-        'ads_count': 'Кол-во объявлений'
+        'price_per_sqm_mean': '💰 Цена за м²',
+        'eco_index': '🌿 Эко-индекс',
+        'area_mean': '📐 Площадь',
+        'air_quality_score': '🌬️ Качество воздуха',
+        'noise_quality': '🔊 Качество шума',
+        'ads_count': '📄 Кол-во объявлений'
     }
     corr_matrix = corr_matrix.rename(index=rename_map, columns=rename_map)
     
@@ -197,7 +189,7 @@ def _render_correlation_matrix(df: pd.DataFrame):
         corr_matrix,
         text_auto='.2f',
         aspect='auto',
-        title='Матрица корреляции показателей',
+        title='Матрица корреляции показателей (красный = положительная, синий = отрицательная)',
         color_continuous_scale='RdBu_r',
         zmin=-1,
         zmax=1
@@ -208,7 +200,7 @@ def _render_correlation_matrix(df: pd.DataFrame):
 
 def _render_top_eco_districts(df: pd.DataFrame):
     """Топ-5 самых экологичных районов"""
-    st.markdown("**Топ-5 экологичных районов**")
+    st.markdown("**🌿 Топ-5 экологичных районов**")
     
     top_eco = df.nlargest(5, 'eco_index')[
         ['District', 'eco_index', 'eco_category', 'price_per_sqm_formatted']
@@ -217,15 +209,15 @@ def _render_top_eco_districts(df: pd.DataFrame):
     for i, (_, row) in enumerate(top_eco.iterrows(), 1):
         st.markdown(f"""
         **{i}. {row['District']}**
-        - Эко-индекс: {row['eco_index']:.1f} ({row['eco_category']})
-        - Цена: {row['price_per_sqm_formatted']}
+        - 🌿 Эко-индекс: {row['eco_index']:.1f} ({row['eco_category']})
+        - 💰 Цена: {row['price_per_sqm_formatted']}
         ---
         """)
 
 
 def _render_top_price_districts(df: pd.DataFrame):
     """Топ-5 самых дорогих районов"""
-    st.markdown("**Топ-5 дорогих районов**")
+    st.markdown("**💰 Топ-5 дорогих районов**")
     
     top_price = df.nlargest(5, 'price_per_sqm_mean')[
         ['District', 'price_per_sqm_formatted', 'eco_index', 'eco_category']
@@ -234,7 +226,7 @@ def _render_top_price_districts(df: pd.DataFrame):
     for i, (_, row) in enumerate(top_price.iterrows(), 1):
         st.markdown(f"""
         **{i}. {row['District']}**
-        - Цена: {row['price_per_sqm_formatted']}
-        - Эко-индекс: {row['eco_index']:.1f} ({row['eco_category']})
+        - 💰 Цена: {row['price_per_sqm_formatted']}
+        - 🌿 Эко-индекс: {row['eco_index']:.1f} ({row['eco_category']})
         ---
         """)
