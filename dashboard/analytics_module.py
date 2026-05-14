@@ -31,29 +31,25 @@ def calculate_correlation_stats(df: pd.DataFrame):
     direction = "положительная" if r > 0 else "отрицательная"
     interpretation = f"{strength} {direction} связь"
     is_significant = p_value < 0.05
-    significance_text = "статистически значимо" if is_significant else "статистически не значимо"
     
     return {
         'r': r,
         'p_value': p_value,
         'r_squared': r_squared,
         'interpretation': interpretation,
-        'significance': significance_text,
         'is_significant': is_significant,
         'n_samples': len(x)
     }
 
 
 def render_analytics_tab(df: pd.DataFrame):
-    """Отображает вкладку с графиками аналитики"""
+    """Отображает вкладку с графиками аналитики (компактная версия)"""
     
-    st.subheader("Взаимосвязь цены и экологии")
-    
-    # Статистическая карточка
-    with st.expander("Статистический анализ корреляции", expanded=True):
+    # Статистический анализ корреляции (свернутый по умолчанию)
+    with st.expander("📊 Статистический анализ корреляции", expanded=False):
         stats = calculate_correlation_stats(df)
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Коэффициент корреляции (r)", f"{stats['r']:.3f}")
             st.caption(f"p-value: {stats['p_value']:.4f}")
@@ -62,48 +58,37 @@ def render_analytics_tab(df: pd.DataFrame):
             st.caption(f"n = {stats['n_samples']} районов")
         with col3:
             st.metric("Интерпретация", stats['interpretation'])
+        with col4:
             status = "✅ значимо" if stats['is_significant'] else "⚠️ не значимо"
-            st.caption(f"Статистическая значимость: {status}")
-    # Пояснение о корреляции (перенесено в KPI панель)
-    st.markdown("""
-    <div style='background-color: #f0f2f6; padding: 12px 15px; border-radius: 8px; margin-top: 15px;'>
-        <p style='font-size: 15px; margin: 0; color: #333;'>
-         Коэффициент корреляции r показывает силу связи между ценой и экологией: 
-        r = 0 — связи нет, r = 1 — идеальная положительная, r = -1 — идеальная отрицательная. 
-        Статистическая значимость (p-value < 0.05) означает, что связь не случайна.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+            st.metric("Статистическая значимость", status)
     
-    st.subheader("Диаграмма рассеяния")
-    st.markdown("""
-    <div style='background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;'>
-        <b style='font-size: 16px;'>Категории экологического индекса:</b><br>
-        <span style='color: #2ecc71; font-weight: bold;'>A (Отлично)</span> = 80–100 баллов<br>
-        <span style='color: #f1c40f; font-weight: bold;'>B (Хорошо)</span> = 60–80 баллов<br>
-        <span style='color: #e67e22; font-weight: bold;'>C (Удовлетворительно)</span> = 40–60 баллов
-    </div>
-    """, unsafe_allow_html=True)
-    _render_scatter_plot_with_trend(df, stats)
+    # Основные графики в 2 колонки
+    col_left, col_right = st.columns(2, gap="medium")
     
-    st.subheader("Распределение цен по категориям экологии")
-    _render_box_plot(df)
+    with col_left:
+        st.subheader("📉 Диаграмма рассеяния")
+        _render_scatter_plot_compact(df)
     
-    st.subheader("Матрица корреляции показателей")
-    _render_correlation_matrix(df)
+    with col_right:
+        st.subheader("🔥 Матрица корреляций")
+        _render_correlation_matrix_compact(df)
     
-    st.subheader("Рейтинги районов")
-    col1, col2 = st.columns(2)
-    with col1:
-        _render_top_eco_districts(df)
-    with col2:
-        _render_top_price_districts(df)
-        
+    # Второй ряд
+    col_left2, col_right2 = st.columns(2, gap="medium")
+    
+    with col_left2:
+        st.subheader("📦 Распределение цен по экологии")
+        _render_box_plot_compact(df)
+    
+    with col_right2:
+        st.subheader("🏆 Топ-5 районов")
+        _render_top_districts_compact(df)
 
 
-def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
-    """Scatter plot с линией линейного тренда"""
+def _render_scatter_plot_compact(df: pd.DataFrame):
+    """Компактный scatter plot"""
     plot_df = df[['eco_index', 'price_per_sqm_mean', 'eco_category', 'area_mean', 'District']].dropna()
+    stats = calculate_correlation_stats(df)
     
     fig = go.Figure()
     
@@ -112,7 +97,7 @@ def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
         y=plot_df['price_per_sqm_mean'],
         mode='markers',
         marker=dict(
-            size=plot_df['area_mean'] / 8,
+            size=8,
             color=plot_df['eco_category'].map({
                 'A (Отлично)': '#2ecc71',
                 'B (Хорошо)': '#f1c40f', 
@@ -120,7 +105,7 @@ def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
             }).fillna('#95a5a6'),
             showscale=False,
             opacity=0.7,
-            line=dict(width=0)  # Убираем обводку
+            line=dict(width=0)
         ),
         text=plot_df['District'],
         hovertemplate='<b>%{text}</b><br>🌿 Эко-индекс: %{x:.1f}<br>💰 Цена: %{y:,.0f} ₽<extra></extra>',
@@ -138,77 +123,23 @@ def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
         y=y_trend,
         mode='lines',
         line=dict(color='red', width=2, dash='dash'),
-        name=f'Тренд: y = {z[0]:.0f}x + {z[1]:.0f}<br>r = {stats["r"]:.3f}'
+        name=f'r = {stats["r"]:.3f}'
     ))
     
     fig.update_layout(
-        xaxis_title='Экологический индекс (выше = лучше)',
-        yaxis_title='Цена за кв.м (₽)',
-        height=500,
-        font=dict(size=12),
-        hovermode='closest',
-        plot_bgcolor='white',
-        xaxis=dict(
-            gridcolor='lightgray',
-            linecolor='black',
-            linewidth=1
-        ),
-        yaxis=dict(
-            gridcolor='lightgray',
-            linecolor='black',
-            linewidth=1,
-            tickformat=',.0f'  # Формат чисел без undefined
-        )
+        height=350,
+        margin=dict(l=40, r=20, t=20, b=40),
+        xaxis_title='Эко-индекс',
+        yaxis_title='Цена, ₽',
+        showlegend=True,
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
     )
     
     st.plotly_chart(fig, use_container_width=True)
 
 
-def _render_box_plot(df: pd.DataFrame):
-    """Box plot по категориям экологии"""
-    plot_df = df[df['eco_category'] != 'Нет данных'].copy()
-    
-    if len(plot_df) == 0:
-        st.info("Недостаточно данных для box plot")
-        return
-    
-    fig = px.box(
-        plot_df,
-        x='eco_category',
-        y='price_per_sqm_mean',
-        color='eco_category',
-        title='Распределение цен по категориям экологии',
-        labels={
-            'eco_category': 'Категория экологии',
-            'price_per_sqm_mean': 'Цена за кв.м (₽)'
-        },
-        color_discrete_map={
-            'A (Отлично)': '#2ecc71',
-            'B (Хорошо)': '#f1c40f',
-            'C (Удовлетворительно)': '#e67e22'
-        }
-    )
-    fig.update_layout(
-        height=550,
-        font=dict(size=16),           # Основной шрифт 16px
-        title_font=dict(size=20),     # Заголовок 20px
-        showlegend=False,
-        plot_bgcolor='white',
-        xaxis=dict(
-            title_font=dict(size=18),   # Подпись оси X 18px
-            tickfont=dict(size=14),     # Метки категорий 14px
-            tickangle=0
-        ),
-        yaxis=dict(
-            title_font=dict(size=18),   # Подпись оси Y 18px
-            tickfont=dict(size=14)      # Цифры 14px
-        )
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def _render_correlation_matrix(df: pd.DataFrame):
-    """Тепловая карта корреляции с увеличенным шрифтом"""
+def _render_correlation_matrix_compact(df: pd.DataFrame):
+    """Компактная тепловая карта корреляции"""
     available_cols = ['price_per_sqm_mean', 'eco_index', 'area_mean']
     
     for col in ['air_quality_score', 'noise_quality', 'ads_count']:
@@ -218,12 +149,12 @@ def _render_correlation_matrix(df: pd.DataFrame):
     corr_matrix = df[available_cols].corr()
     
     rename_map = {
-        'price_per_sqm_mean': '💰 Цена за м²',
-        'eco_index': '🌿 Эко-индекс',
-        'area_mean': '📐 Площадь',
-        'air_quality_score': '🌬️ Качество воздуха',
-        'noise_quality': '🔊 Качество шума',
-        'ads_count': '📄 Кол-во объявлений'
+        'price_per_sqm_mean': 'Цена',
+        'eco_index': 'Эко',
+        'area_mean': 'Площадь',
+        'air_quality_score': 'Воздух',
+        'noise_quality': 'Шум',
+        'ads_count': 'Объявления'
     }
     corr_matrix = corr_matrix.rename(index=rename_map, columns=rename_map)
     
@@ -231,63 +162,76 @@ def _render_correlation_matrix(df: pd.DataFrame):
         corr_matrix,
         text_auto='.2f',
         aspect='auto',
-        title='Матрица корреляции показателей',
         color_continuous_scale='RdBu_r',
         zmin=-1,
         zmax=1
     )
     
     fig.update_layout(
-        height=600,
-        font=dict(size=16),           # Основной шрифт 16px
-        title_font=dict(size=20),     # Заголовок 20px
-        xaxis=dict(
-            tickfont=dict(size=14),    # Метки по оси X 14px
-            tickangle=0
-        ),
-        yaxis=dict(
-            tickfont=dict(size=14)     # Метки по оси Y 14px
-        )
+        height=350,
+        margin=dict(l=40, r=20, t=20, b=40),
+        coloraxis_colorbar=dict(title="r", thickness=15)
     )
-    
-    # Увеличим размер чисел внутри ячеек
-    fig.update_traces(textfont=dict(size=16))
+    fig.update_traces(textfont=dict(size=10))
     
     st.plotly_chart(fig, use_container_width=True)
 
 
-def _render_top_eco_districts(df: pd.DataFrame):
-    """Топ-5 самых экологичных районов (сокращённый вывод)"""
-    st.markdown("**🌿 Топ-5 экологичных районов**")
+def _render_box_plot_compact(df: pd.DataFrame):
+    """Компактный box plot"""
+    plot_df = df[df['eco_category'] != 'Нет данных'].copy()
     
-    top_eco = df.nlargest(5, 'eco_index')[
-        ['District', 'eco_index', 'eco_category', 'price_per_sqm_formatted']
-    ]
+    if len(plot_df) == 0:
+        st.info("Недостаточно данных")
+        return
     
-    for i, (_, row) in enumerate(top_eco.iterrows(), 1):
-        # Без дублирования категории в тексте
-        st.markdown(f"""
-        <div style='font-size: 17px; margin-bottom: 12px;'>
-            <b>{i}. {row['District']}</b><br>
-            &nbsp;&nbsp;🌿 Эко-индекс: <b>{row['eco_index']:.1f}</b> (категория {row['eco_category'][0]})<br>
-            &nbsp;&nbsp;💰 Цена: {row['price_per_sqm_formatted']}
-        </div>
-        """, unsafe_allow_html=True)
+    fig = px.box(
+        plot_df,
+        x='eco_category',
+        y='price_per_sqm_mean',
+        color='eco_category',
+        color_discrete_map={
+            'A (Отлично)': '#2ecc71',
+            'B (Хорошо)': '#f1c40f',
+            'C (Удовлетворительно)': '#e67e22'
+        }
+    )
+    
+    fig.update_layout(
+        height=350,
+        margin=dict(l=40, r=20, t=20, b=40),
+        xaxis_title='Категория экологии',
+        yaxis_title='Цена, ₽',
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
-def _render_top_price_districts(df: pd.DataFrame):
-    """Топ-5 самых дорогих районов"""
-    st.markdown("**💰 Топ-5 дорогих районов**")
+def _render_top_districts_compact(df: pd.DataFrame):
+    """Компактные рейтинги (в одну строку)"""
     
-    top_price = df.nlargest(5, 'price_per_sqm_mean')[
-        ['District', 'price_per_sqm_formatted', 'eco_index', 'eco_category']
-    ]
+    # Легенда категорий
+    st.markdown("""
+    <div style='font-size: 12px; margin-bottom: 10px;'>
+        <span style='color:#2ecc71;'>●</span> A (80-100) 
+        <span style='color:#f1c40f; margin-left: 8px;'>●</span> B (60-80) 
+        <span style='color:#e67e22; margin-left: 8px;'>●</span> C (40-60)
+    </div>
+    """, unsafe_allow_html=True)
     
-    for i, (_, row) in enumerate(top_price.iterrows(), 1):
-        st.markdown(f"""
-        <div style='font-size: 17px; margin-bottom: 12px;'>
-            <b>{i}. {row['District']}</b><br>
-            &nbsp;&nbsp;💰 Цена: <b>{row['price_per_sqm_formatted']}</b><br>
-            &nbsp;&nbsp;🌿 Эко-индекс: {row['eco_index']:.1f} (категория {row['eco_category'][0]})
-        </div>
-        """, unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🌿 Топ-5 экологичных районов**")
+        top_eco = df.nlargest(5, 'eco_index')
+        for i, (_, row) in enumerate(top_eco.iterrows(), 1):
+            price_k = row['price_per_sqm_mean'] / 1000
+            st.markdown(f"{i}. **{row['District']}** — эко-индекс {row['eco_index']:.0f}, {price_k:.0f} тыс ₽")
+    
+    with col2:
+        st.markdown("**💰 Топ-5 дорогих районов**")
+        top_price = df.nlargest(5, 'price_per_sqm_mean')
+        for i, (_, row) in enumerate(top_price.iterrows(), 1):
+            price_k = row['price_per_sqm_mean'] / 1000
+            st.markdown(f"{i}. **{row['District']}** — {price_k:.0f} тыс ₽, эко-индекс {row['eco_index']:.0f}")
