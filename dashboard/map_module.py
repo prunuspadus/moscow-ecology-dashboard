@@ -10,7 +10,7 @@ from pathlib import Path
 def render_map_tab(df: pd.DataFrame):
     """Отображает вкладку с интерактивной картой"""
     
-    st.subheader("Экологическая карта районов Москвы")
+    st.subheader("🗺️ Экологическая карта районов Москвы")
     
     geojson_data = _load_geojson()
     
@@ -21,7 +21,7 @@ def render_map_tab(df: pd.DataFrame):
     district_data = _prepare_district_data(df)
     geojson_districts = [f['properties'].get('district', '') for f in geojson_data['features']]
     
-    m = folium.Map(location=[55.76, 37.64], zoom_start=10)
+    m = folium.Map(location=[55.76, 37.64], zoom_start=11, control_scale=True)
     
     _add_choropleth_layer(m, geojson_data, district_data, geojson_districts)
     _add_markers_layer(m, geojson_data, district_data, geojson_districts)
@@ -29,9 +29,11 @@ def render_map_tab(df: pd.DataFrame):
     
     matched_count = sum(1 for d in geojson_districts if _find_district_data(d, district_data, geojson_districts) is not None)
     
-    st.success(f"На карту добавлено {matched_count} районов с информацией")
-    folium_static(m, width=1000, height=700)
-    st.caption("Нажмите на маркер для детальной информации")
+    st.success(f"✅ На карту добавлено {matched_count} районов с информацией")
+    folium_static(m, width=1100, height=750)
+    
+    # Увеличенная подпись под картой
+    st.markdown("<p style='font-size: 16px; color: #666;'>💡 Нажмите на маркер для детальной информации | Используйте +/- для масштабирования</p>", unsafe_allow_html=True)
 
 
 def _load_geojson():
@@ -121,6 +123,7 @@ def _add_choropleth_layer(m, geojson_data, district_data, geojson_districts):
 
 
 def _add_markers_layer(m, geojson_data, district_data, geojson_districts):
+    """Добавление маркеров с информацией (только цена и экология)"""
     for feature in geojson_data['features']:
         geo_name = feature['properties'].get('district', '')
         data = _find_district_data(geo_name, district_data, geojson_districts)
@@ -132,15 +135,13 @@ def _add_markers_layer(m, geojson_data, district_data, geojson_districts):
         if coords is None:
             continue
         
+        # Упрощённый попап: только цена и эко-индекс
         popup_html = f"""
-        <div style="min-width: 250px;">
-            <h4>{geo_name}</h4>
-            <hr>
-            <p><b>Цена:</b> {data['price_formatted']}</p>
-            <p><b>Эко-индекс:</b> {data['eco_index']:.1f}</p>
-            <p><b>Категория:</b> {data['eco_category']}</p>
-            <p><b>Качество воздуха:</b> {data['air_quality']}</p>
-            <p><b>Уровень шума:</b> {data['noise_level']}</p>
+        <div style="min-width: 250px; font-family: Arial, sans-serif;">
+            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #2c3e50;">🏘️ {geo_name}</h4>
+            <hr style="margin: 8px 0;">
+            <p style="font-size: 16px; margin: 6px 0;"><b>💰 Цена:</b> {data['price_formatted']}</p>
+            <p style="font-size: 16px; margin: 6px 0;"><b>🌿 Эко-индекс:</b> {data['eco_index']:.1f} ({data['eco_category']})</p>
         </div>
         """
         
@@ -150,7 +151,6 @@ def _add_markers_layer(m, geojson_data, district_data, geojson_districts):
             tooltip=f"{geo_name} | Эко: {data['eco_index']:.0f} | Цена: {data['price_formatted']}",
             icon=folium.Icon(color='blue', icon='info-sign', prefix='glyphicon')
         ).add_to(m)
-
 
 def _get_polygon_center(geometry):
     try:
@@ -169,13 +169,16 @@ def _get_polygon_center(geometry):
 
 
 def _add_legend(m):
+    """Добавление легенды с увеличенным шрифтом"""
     legend_html = '''
-    <div style="position: fixed; bottom: 50px; right: 50px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;">
-        <b>Экологический индекс</b><br>
-        <span style="background:#2ecc71; width:15px;height:15px;display:inline-block;"></span> 80-100 Отлично<br>
-        <span style="background:#f1c40f; width:15px;height:15px;display:inline-block;"></span> 60-80 Хорошо<br>
-        <span style="background:#e67e22; width:15px;height:15px;display:inline-block;"></span> 40-60 Удовлетворительно<br>
-        <span style="background:#e74c3c; width:15px;height:15px;display:inline-block;"></span> 0-40 Плохо
+    <div style="position: fixed; bottom: 50px; right: 50px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; font-family: Arial, sans-serif; min-width: 200px;">
+        <b style="font-size: 16px;">🌿 Экологический индекс</b><br><br>
+        <span style="background:#2ecc71; width:18px;height:18px;display:inline-block;border-radius:3px;"></span> <span style="font-size: 15px;">80-100 Отлично</span><br>
+        <span style="background:#f1c40f; width:18px;height:18px;display:inline-block;border-radius:3px;"></span> <span style="font-size: 15px;">60-80 Хорошо</span><br>
+        <span style="background:#e67e22; width:18px;height:18px;display:inline-block;border-radius:3px;"></span> <span style="font-size: 15px;">40-60 Удовлетворительно</span><br>
+        <span style="background:#e74c3c; width:18px;height:18px;display:inline-block;border-radius:3px;"></span> <span style="font-size: 15px;">0-40 Плохо</span><br>
+        <hr style="margin: 10px 0;">
+        <span style="background:#4285F4; width:18px;height:18px;display:inline-block;border-radius:50%;"></span> <span style="font-size: 15px;">📍 Маркеры с инфо</span>
     </div>
     '''
     m.get_root().html.add_child(folium.Element(legend_html))

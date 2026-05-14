@@ -1,4 +1,3 @@
-# dashboard/analytics_module.py 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -48,10 +47,10 @@ def calculate_correlation_stats(df: pd.DataFrame):
 def render_analytics_tab(df: pd.DataFrame):
     """Отображает вкладку с графиками аналитики"""
     
-    st.subheader("📈 Взаимосвязь цены и экологии")
+    st.subheader("Взаимосвязь цены и экологии")
     
     # Статистическая карточка
-    with st.expander("📊 Статистический анализ корреляции", expanded=True):
+    with st.expander("Статистический анализ корреляции", expanded=True):
         stats = calculate_correlation_stats(df)
         
         col1, col2, col3 = st.columns(3)
@@ -65,26 +64,41 @@ def render_analytics_tab(df: pd.DataFrame):
             st.metric("Интерпретация", stats['interpretation'])
             status = "✅ значимо" if stats['is_significant'] else "⚠️ не значимо"
             st.caption(f"Статистическая значимость: {status}")
+    # Пояснение о корреляции (перенесено в KPI панель)
+    st.markdown("""
+    <div style='background-color: #f0f2f6; padding: 12px 15px; border-radius: 8px; margin-top: 15px;'>
+        <p style='font-size: 15px; margin: 0; color: #333;'>
+         Коэффициент корреляции r показывает силу связи между ценой и экологией: 
+        r = 0 — связи нет, r = 1 — идеальная положительная, r = -1 — идеальная отрицательная. 
+        Статистическая значимость (p-value < 0.05) означает, что связь не случайна.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Scatter plot с линией тренда
-    st.subheader("📉 Диаграмма рассеяния")
+    st.subheader("Диаграмма рассеяния")
+    st.markdown("""
+    <div style='background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;'>
+        <b style='font-size: 16px;'>Категории экологического индекса:</b><br>
+        <span style='color: #2ecc71; font-weight: bold;'>A (Отлично)</span> = 80–100 баллов<br>
+        <span style='color: #f1c40f; font-weight: bold;'>B (Хорошо)</span> = 60–80 баллов<br>
+        <span style='color: #e67e22; font-weight: bold;'>C (Удовлетворительно)</span> = 40–60 баллов
+    </div>
+    """, unsafe_allow_html=True)
     _render_scatter_plot_with_trend(df, stats)
     
-    # Box plot
-    st.subheader("📦 Распределение цен по категориям экологии")
+    st.subheader("Распределение цен по категориям экологии")
     _render_box_plot(df)
     
-    # Тепловая карта
-    st.subheader("🔥 Матрица корреляции показателей")
+    st.subheader("Матрица корреляции показателей")
     _render_correlation_matrix(df)
     
-    # Рейтинги
-    st.subheader("🏆 Рейтинги районов")
+    st.subheader("Рейтинги районов")
     col1, col2 = st.columns(2)
     with col1:
         _render_top_eco_districts(df)
     with col2:
         _render_top_price_districts(df)
+        
 
 
 def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
@@ -93,20 +107,20 @@ def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
     
     fig = go.Figure()
     
-    # Точки
     fig.add_trace(go.Scatter(
         x=plot_df['eco_index'],
         y=plot_df['price_per_sqm_mean'],
         mode='markers',
         marker=dict(
-            size=plot_df['area_mean'] / 10,
+            size=plot_df['area_mean'] / 8,
             color=plot_df['eco_category'].map({
                 'A (Отлично)': '#2ecc71',
                 'B (Хорошо)': '#f1c40f', 
                 'C (Удовлетворительно)': '#e67e22'
             }).fillna('#95a5a6'),
             showscale=False,
-            opacity=0.7
+            opacity=0.7,
+            line=dict(width=0)  # Убираем обводку
         ),
         text=plot_df['District'],
         hovertemplate='<b>%{text}</b><br>🌿 Эко-индекс: %{x:.1f}<br>💰 Цена: %{y:,.0f} ₽<extra></extra>',
@@ -124,14 +138,27 @@ def _render_scatter_plot_with_trend(df: pd.DataFrame, stats: dict):
         y=y_trend,
         mode='lines',
         line=dict(color='red', width=2, dash='dash'),
-        name=f'📈 Тренд: y = {z[0]:.0f}x + {z[1]:.0f}<br>r = {stats["r"]:.3f}'
+        name=f'Тренд: y = {z[0]:.0f}x + {z[1]:.0f}<br>r = {stats["r"]:.3f}'
     ))
     
     fig.update_layout(
         xaxis_title='Экологический индекс (выше = лучше)',
         yaxis_title='Цена за кв.м (₽)',
         height=500,
-        hovermode='closest'
+        font=dict(size=12),
+        hovermode='closest',
+        plot_bgcolor='white',
+        xaxis=dict(
+            gridcolor='lightgray',
+            linecolor='black',
+            linewidth=1
+        ),
+        yaxis=dict(
+            gridcolor='lightgray',
+            linecolor='black',
+            linewidth=1,
+            tickformat=',.0f'  # Формат чисел без undefined
+        )
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -161,12 +188,27 @@ def _render_box_plot(df: pd.DataFrame):
             'C (Удовлетворительно)': '#e67e22'
         }
     )
-    fig.update_layout(height=500, showlegend=False)
+    fig.update_layout(
+        height=550,
+        font=dict(size=16),           # Основной шрифт 16px
+        title_font=dict(size=20),     # Заголовок 20px
+        showlegend=False,
+        plot_bgcolor='white',
+        xaxis=dict(
+            title_font=dict(size=18),   # Подпись оси X 18px
+            tickfont=dict(size=14),     # Метки категорий 14px
+            tickangle=0
+        ),
+        yaxis=dict(
+            title_font=dict(size=18),   # Подпись оси Y 18px
+            tickfont=dict(size=14)      # Цифры 14px
+        )
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
 def _render_correlation_matrix(df: pd.DataFrame):
-    """Тепловая карта корреляции"""
+    """Тепловая карта корреляции с увеличенным шрифтом"""
     available_cols = ['price_per_sqm_mean', 'eco_index', 'area_mean']
     
     for col in ['air_quality_score', 'noise_quality', 'ads_count']:
@@ -189,17 +231,33 @@ def _render_correlation_matrix(df: pd.DataFrame):
         corr_matrix,
         text_auto='.2f',
         aspect='auto',
-        title='Матрица корреляции показателей (красный = положительная, синий = отрицательная)',
+        title='Матрица корреляции показателей',
         color_continuous_scale='RdBu_r',
         zmin=-1,
         zmax=1
     )
-    fig.update_layout(height=500)
+    
+    fig.update_layout(
+        height=600,
+        font=dict(size=16),           # Основной шрифт 16px
+        title_font=dict(size=20),     # Заголовок 20px
+        xaxis=dict(
+            tickfont=dict(size=14),    # Метки по оси X 14px
+            tickangle=0
+        ),
+        yaxis=dict(
+            tickfont=dict(size=14)     # Метки по оси Y 14px
+        )
+    )
+    
+    # Увеличим размер чисел внутри ячеек
+    fig.update_traces(textfont=dict(size=16))
+    
     st.plotly_chart(fig, use_container_width=True)
 
 
 def _render_top_eco_districts(df: pd.DataFrame):
-    """Топ-5 самых экологичных районов"""
+    """Топ-5 самых экологичных районов (сокращённый вывод)"""
     st.markdown("**🌿 Топ-5 экологичных районов**")
     
     top_eco = df.nlargest(5, 'eco_index')[
@@ -207,12 +265,14 @@ def _render_top_eco_districts(df: pd.DataFrame):
     ]
     
     for i, (_, row) in enumerate(top_eco.iterrows(), 1):
+        # Без дублирования категории в тексте
         st.markdown(f"""
-        **{i}. {row['District']}**
-        - 🌿 Эко-индекс: {row['eco_index']:.1f} ({row['eco_category']})
-        - 💰 Цена: {row['price_per_sqm_formatted']}
-        ---
-        """)
+        <div style='font-size: 17px; margin-bottom: 12px;'>
+            <b>{i}. {row['District']}</b><br>
+            &nbsp;&nbsp;🌿 Эко-индекс: <b>{row['eco_index']:.1f}</b> (категория {row['eco_category'][0]})<br>
+            &nbsp;&nbsp;💰 Цена: {row['price_per_sqm_formatted']}
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def _render_top_price_districts(df: pd.DataFrame):
@@ -225,8 +285,9 @@ def _render_top_price_districts(df: pd.DataFrame):
     
     for i, (_, row) in enumerate(top_price.iterrows(), 1):
         st.markdown(f"""
-        **{i}. {row['District']}**
-        - 💰 Цена: {row['price_per_sqm_formatted']}
-        - 🌿 Эко-индекс: {row['eco_index']:.1f} ({row['eco_category']})
-        ---
-        """)
+        <div style='font-size: 17px; margin-bottom: 12px;'>
+            <b>{i}. {row['District']}</b><br>
+            &nbsp;&nbsp;💰 Цена: <b>{row['price_per_sqm_formatted']}</b><br>
+            &nbsp;&nbsp;🌿 Эко-индекс: {row['eco_index']:.1f} (категория {row['eco_category'][0]})
+        </div>
+        """, unsafe_allow_html=True)

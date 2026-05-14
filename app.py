@@ -1,4 +1,3 @@
-# app.py 
 import streamlit as st
 from pathlib import Path
 import pandas as pd
@@ -9,6 +8,55 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+st.markdown("""
+<style>
+    /* Увеличенные заголовки */
+    h1 {
+        font-size: 36px !important;
+        font-weight: 700 !important;
+        margin-bottom: 10px !important;
+    }
+    h2 {
+        font-size: 32px !important;
+        font-weight: 600 !important;
+        margin-top: 10px !important;
+        margin-bottom: 15px !important;
+    }
+    h3 {
+        font-size: 24px !important;
+        font-weight: 600 !important;
+    }
+    
+    /* KPI метрики — крупные цифры */
+    [data-testid="stMetricValue"] {
+        font-size: 36px !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 18px !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Вкладки */
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        font-size: 22px !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Обычный текст */
+    p, li, .stMarkdown {
+        font-size: 16px !important;
+    }
+    
+    /* Подзаголовок с датой */
+    .date-subheader {
+        font-size: 18px !important;
+        color: #666;
+        margin-bottom: 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 st.title("🌿 Анализ взаимосвязи экологии и цен на недвижимость в Москве")
 st.markdown("📅 Данные: экология за 2025 год | цены за апрель 2026")
@@ -42,7 +90,7 @@ with tab2:
 
 st.markdown("---")
 st.markdown(
-    "<div style='text-align: center; color: #666;'>"
+    "<div style='text-align: center; color: #666; font-size: 14px;'>"
     "📊 Дашборд создан для анализа взаимосвязи экологических показателей "
     "и цен на недвижимость в Москве<br>"
     "🗺️ Данные: data.mos.ru (экология) | Avito (цены)"
